@@ -1,0 +1,45 @@
+{
+  "name": "@kurovu146/bracket-engine",
+  "version": "1.0.0",
+  "description": "Tournament bracket generation engine for single elimination, double elimination, and round-robin formats",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "tournament",
+    "bracket",
+    "single-elimination",
+    "double-elimination",
+    "round-robin",
+    "esports",
+    "sports"
+  ],
+  "author": "kurovu146 <kurobakaito146@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kurovu146/bracket-engine.git"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
