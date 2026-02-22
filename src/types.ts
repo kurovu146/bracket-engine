@@ -1,5 +1,9 @@
 /** Bracket type for a match */
-export type BracketType = "winners" | "losers" | "grand_final";
+export type BracketType =
+  | "winners"
+  | "losers"
+  | "grand_final"
+  | `group_${number}`;
 
 /** A generated match in the bracket */
 export interface MatchSeed {

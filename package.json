@@ -1,7 +1,7 @@
 {
   "name": "@kurovu146/bracket-engine",
-  "version": "1.0.1",
-  "description": "Tournament bracket generation engine for single elimination, double elimination, and round-robin formats",
+  "version": "1.1.0",
+  "description": "Tournament bracket generation engine — single/double elimination, round-robin, Swiss system, and group stage",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -28,6 +28,8 @@
     "single-elimination",
     "double-elimination",
     "round-robin",
+    "swiss",
+    "group-stage",
     "esports",
     "sports"
   ],
