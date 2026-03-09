@@ -1,4 +1,5 @@
 /**
+ * @deprecated Use `standardSeed` from `./seeding` instead.
  * Seed participants into bracket positions.
  * Fills positions sequentially, remaining slots are null (byes).
  */

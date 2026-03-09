@@ -26,7 +26,6 @@ describe("generateGroupStage", () => {
     const ids = ["A", "B", "C", "D", "E", "F", "G", "H"];
     const result = generateGroupStage(ids, 2);
 
-    // 4 players per group → C(4,2) = 6 matches per group → 12 total
     expect(result.matches).toHaveLength(12);
   });
 
@@ -73,11 +72,9 @@ describe("generateGroupStage", () => {
     const ids = ["A", "B", "C", "D", "E", "F", "G"];
     const result = generateGroupStage(ids, 2);
 
-    // 7 players, 2 groups: group 0 gets 4, group 1 gets 3
     expect(result.groups[0]).toHaveLength(4);
     expect(result.groups[1]).toHaveLength(3);
 
-    // Group 0: C(4,2) = 6 matches, Group 1: C(3,2) = 3 matches
     expect(result.matches).toHaveLength(9);
   });
 
@@ -85,7 +82,6 @@ describe("generateGroupStage", () => {
     const ids = Array.from({ length: 16 }, (_, i) => `P${i + 1}`);
     const result = generateGroupStage(ids);
 
-    // round(16/4) = 4 groups, 4 players each
     expect(result.groups).toHaveLength(4);
     for (const group of result.groups) {
       expect(group.length).toBeGreaterThanOrEqual(3);
@@ -98,7 +94,6 @@ describe("generateGroupStage", () => {
     const result = generateGroupStage(ids, 4);
 
     expect(result.groups).toHaveLength(4);
-    // 3 players per group → C(3,2) = 3 matches per group → 12 total
     expect(result.matches).toHaveLength(12);
   });
 
@@ -109,6 +104,8 @@ describe("generateGroupStage", () => {
     for (const m of result.matches) {
       expect(m.next_match_index).toBeNull();
       expect(m.loser_next_match_index).toBeNull();
+      expect(m.next_match_slot).toBeNull();
+      expect(m.loser_next_match_slot).toBeNull();
     }
   });
 
@@ -141,10 +138,142 @@ describe("generateGroupStage", () => {
     expect(result.matches).toHaveLength(1);
   });
 
-  it("handles 2 players with 2 groups (each group has 1 player, no valid matches)", () => {
+  it("handles 2 players with 2 groups (each group has 1 player)", () => {
     const result = generateGroupStage(["A", "B"], 2);
-    // Each group has 1 player → both filtered out → no valid groups
-    expect(result.groups).toHaveLength(0);
+    // Groups preserved: [["A"], ["B"]] — both have < 2 players, 0 matches
+    expect(result.groups).toHaveLength(2);
+    expect(result.groups[0]).toEqual(["A"]);
+    expect(result.groups[1]).toEqual(["B"]);
     expect(result.matches).toHaveLength(0);
+  });
+
+  // ===== NEW TESTS =====
+
+  describe("group index stability", () => {
+    it("preserves original group indices even when some groups have < 2 players", () => {
+      // 5 players, 3 groups: group_0=[A,D], group_1=[B,E], group_2=[C]
+      const result = generateGroupStage(["A", "B", "C", "D", "E"], 3);
+
+      expect(result.groups).toHaveLength(3);
+      expect(result.groups[2]).toEqual(["C"]); // 1 player, preserved
+
+      // group_2 has no matches but bracket_type "group_0" and "group_1" exist
+      const g0 = result.matches.filter((m) => m.bracket_type === "group_0");
+      const g1 = result.matches.filter((m) => m.bracket_type === "group_1");
+      const g2 = result.matches.filter((m) => m.bracket_type === "group_2");
+
+      expect(g0.length).toBeGreaterThan(0);
+      expect(g1.length).toBeGreaterThan(0);
+      expect(g2).toHaveLength(0); // no matches, but index preserved
+    });
+  });
+
+  describe("match_id", () => {
+    it("generates G{N}-format match IDs", () => {
+      const result = generateGroupStage(["A", "B", "C", "D"], 2);
+      for (const m of result.matches) {
+        expect(m.match_id).toMatch(/^G\d+-R\d+-M\d+$/);
+      }
+    });
+
+    it("match IDs are unique", () => {
+      const result = generateGroupStage(
+        Array.from({ length: 16 }, (_, i) => `P${i + 1}`),
+        4
+      );
+      const ids = result.matches.map((m) => m.match_id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  describe("snake draft distribution", () => {
+    it("distributes players in snake order", () => {
+      const ids = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"];
+      const result = generateGroupStage(ids, { numGroups: 2, distribution: "snake" });
+
+      // Snake: 0,1,1,0,0,1,1,0
+      // Group 0: P1, P4, P5, P8
+      // Group 1: P2, P3, P6, P7
+      expect(result.groups[0]).toEqual(["P1", "P4", "P5", "P8"]);
+      expect(result.groups[1]).toEqual(["P2", "P3", "P6", "P7"]);
+    });
+
+    it("snake with 4 groups", () => {
+      const ids = Array.from({ length: 8 }, (_, i) => `P${i + 1}`);
+      const result = generateGroupStage(ids, { numGroups: 4, distribution: "snake" });
+
+      // Snake 4 groups: 0,1,2,3,3,2,1,0
+      // Group 0: P1, P8
+      // Group 1: P2, P7
+      // Group 2: P3, P6
+      // Group 3: P4, P5
+      expect(result.groups[0]).toEqual(["P1", "P8"]);
+      expect(result.groups[1]).toEqual(["P2", "P7"]);
+      expect(result.groups[2]).toEqual(["P3", "P6"]);
+      expect(result.groups[3]).toEqual(["P4", "P5"]);
+    });
+
+    it("default distribution is sequential", () => {
+      const ids = ["A", "B", "C", "D", "E", "F", "G", "H"];
+      const result = generateGroupStage(ids, { numGroups: 2 });
+
+      // Sequential: 0,1,0,1,...
+      expect(result.groups[0]).toEqual(["A", "C", "E", "G"]);
+      expect(result.groups[1]).toEqual(["B", "D", "F", "H"]);
+    });
+  });
+
+  describe("doubleRoundRobin option", () => {
+    it("doubles matches within each group", () => {
+      const single = generateGroupStage(["A", "B", "C", "D"], { numGroups: 2 });
+      const double = generateGroupStage(["A", "B", "C", "D"], {
+        numGroups: 2,
+        doubleRoundRobin: true,
+      });
+      expect(double.matches).toHaveLength(single.matches.length * 2);
+    });
+  });
+
+  describe("bestOf option", () => {
+    it("applies best_of to all matches", () => {
+      const result = generateGroupStage(["A", "B", "C", "D"], {
+        numGroups: 2,
+        bestOf: { default: 3 },
+      });
+      for (const m of result.matches) {
+        expect(m.best_of).toBe(3);
+      }
+    });
+  });
+
+  describe("backward compatibility", () => {
+    it("number argument still works as numGroups", () => {
+      const result = generateGroupStage(["A", "B", "C", "D", "E", "F"], 2);
+      expect(result.groups).toHaveLength(2);
+    });
+
+    it("options object works", () => {
+      const result = generateGroupStage(["A", "B", "C", "D", "E", "F"], { numGroups: 3 });
+      expect(result.groups).toHaveLength(3);
+    });
+  });
+
+  describe("input validation", () => {
+    it("throws for duplicate IDs", () => {
+      expect(() => generateGroupStage(["A", "A", "B"])).toThrow();
+    });
+
+    it("throws for empty string IDs", () => {
+      expect(() => generateGroupStage(["A", ""])).toThrow();
+    });
+  });
+
+  describe("round_name", () => {
+    it("matches have Round N format", () => {
+      const result = generateGroupStage(["A", "B", "C", "D"], 2);
+      for (const m of result.matches) {
+        expect(m.round_name).toBe(`Round ${m.round}`);
+      }
+    });
   });
 });
